@@ -1,0 +1,93 @@
+create table Sale (
+	number int not null,
+	id varchar(10) not null,
+	productID varchar(10) not null,
+	rdate datetime not null,
+	num int not null,
+	price int not null,
+	primary key(number));
+---------------------------------------------------------------------------------------
+
+insert into Sale values(1,'sea','pa',now(),10,1000);
+insert into Sale values(2,'sky','pb',now(),20,2000);
+insert into Sale values(3,'town','pc',now(),30,3000);
+insert into Sale values(4,'ground','pd',now(),40,4000);
+----------------------------------------------------------------------------------------
+#Sale.java
+
+package com.webp.p5;
+import java.time.LocalDateTime;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import org.hibernate.annotations.CreationTimestamp;
+
+@Entity
+public class Sale {
+	@Id public Integer number;//구매번호
+	public String id;//고객아이디
+	public String productID;//제품이름
+	@CreationTimestamp public LocalDateTime rdate; //구매일시
+	public Integer num;//구매수량
+	public Integer price; //구매금액
+	
+	
+} // class
+---------------------------------------------------------------------------------------------
+#SaleRepository.java
+
+package com.webp.p5;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+@Repository
+public interface SaleRepository extends JpaRepository<Sale, Integer> {
+} // interface
+
+---------------------------------------------------------------------------------------------
+#SaleController
+
+package com.webp.p5;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+@Controller
+public class SaleController {
+
+@Autowired
+private SaleRepository saleRep; //SaleRepository는 JPA역할로 데이터 베이스에 있는 값들을 변수 saleRep 저장
+
+@GetMapping("/sale")
+public String saleList(Model mo) {
+	List<Sale> list = saleRep.findAll(); //ArrayList에서 상위버전 List로 한 행의 있는 칼럼의 값들을 받음 , findAll()함수는 모든 데이터베이스의 값들을 가져와라
+	mo.addAttribute("list",list);
+	return "saleList";
+}
+
+} // class
+-----------------------------------------------------------------------------------------
+#saleList.html
+
+<html xmlns:th="http://www.thymeleaf.com">
+<head>
+<meta charset="UTF-8">
+<title>회원 리스트</title>
+</head>
+<body style="background-color:rgb(255, 255, 128)">
+<div align="center">
+<h3> 전체 회원 리스트 (number 순)</h3>
+
+<table width="600" border="1">
+<tr> <th>number <th>id <th>productID <th>rdate <th>num <th>price
+<tr th:each="m:${list}"> 
+<td th:text="${m.number}" style="color:blue; font-weight:bold">number <!-- 구매번호 -->
+<td th:text="${m.id}">id <!-- 고객 아이디 -->
+<td th:text="${m.productID}">productID <!-- 제품 아이디 -->
+<td th:text="${m.rdate}">rdate<!-- 구매일시 -->
+<td th:text="${m.num}" style="color:red; text-align:right">price <!-- 구매수량 -->
+<td th:text="${m.price}">price <!-- 구매금액 -->
+</table><br>
+<a href="/menu">메뉴로 돌아가기</a> 
+</div>
+</body>
+</html>

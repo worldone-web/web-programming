@@ -1,0 +1,272 @@
+@StarRepository.java
+
+package com.webp.p5;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+@Repository
+public interface StarRepository extends JpaRepository<Star, Integer> {//테이블, 아이디
+	@Transactional 
+	@Modifying 
+	@Query("update Star s set s.count_final=s.count_final+1 where s.name=?1") 
+	int updateCount(String final_name); //결승자
+	
+	@Transactional 
+	@Modifying 
+	@Query("update Star s set s.count_semi=s.count_semi+1 where s.name=?1") 
+	int updateSemiCount(String semi_name); //준결승
+	
+	
+	@Transactional 
+	@Modifying 
+	@Query("update Star s set s.count_final=0, s.count_semi=0") //값초기화
+	int starReset(); //물음표가 필요없기때문에 괄호안에 아무것도 없다.
+} // interface
+---------------------------------------------------------------------------------------------------------------
+@StarController.java
+
+package com.webp.p5;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class StarController {
+	@Autowired 
+	private StarRepository starRep;
+
+	@GetMapping("/star1")
+	public String star1() {
+		return "star/star1";
+	}
+	
+	@GetMapping("/star2")
+	public String star2(String star1, Model model) {
+		model.addAttribute("star1",star1); // hidden에서 값을 저장
+		return "star/star2";
+	}
+	
+	@GetMapping("/star3")
+	public String star3(String ch1, String star2, Model model) {
+		model.addAttribute("star1",ch1);//star1을 저장한 공간은 ch1
+		model.addAttribute("star2",star2);
+		return "star/star3";
+	}
+	@GetMapping("/star/winner") //최종결승자 보여주기
+	public String starWinner(String winner, String ch1, String ch2, Model mo) {
+	
+	if(winner.equals(ch2)) { //ch1가 우승이면 결승count 올리고 ch2는 준결승count올리기
+		starRep.updateCount(ch2);	
+		starRep.updateSemiCount(ch1);
+	}else {
+		starRep.updateCount(ch1);	
+		starRep.updateSemiCount(ch2);
+	}
+	
+	mo.addAttribute("winner",winner);
+	return "star/starWinner";
+	}
+	
+	@GetMapping("/star/list")
+	public String starList(Model mo) {
+		List<Star> list = starRep.findAll(); 
+		mo.addAttribute("list",list);
+		return "star/starList";
+	}
+	
+	@GetMapping("/star/reset") //추가된 메소드 리셋
+	public String starReset() {
+		starRep.starReset();
+		return "redirect:/star/list";
+	}
+}
+---------------------------------------------------------------------------------------------------------------
+@starList.html
+
+<html xmlns:th="http://www.thymeleaf.com">
+<head>
+	<meta charset="UTF-8">
+	<title>제목</title>
+</head>
+<body style="background-color:rgb(255, 255, 128)">
+	<form method="get" action="/star/reset"> <!-- 버튼 클릭시 초기화 -->
+	<div align="center">
+		<h3> 투표결과</h3>
+
+			<table  border="1">
+			<tr> <th>이름 <th>준결승 통과 <th> 최종우승
+			<tr th:each="m:${list}"> 
+			<td th:text="${m.name}">name 
+			<td th:text="${m.count_semi}">count_semi
+			<td th:text="${m.count_final}">count_final
+			</table><br>
+	<a href="/star1">4강전 다시시작</a>
+	<button type="submit">투표결과 초기화</button><!-- 버튼 클릭시 초기화 -->
+	</div>
+	</form>
+</body>
+</html>
+---------------------------------------------------------------------------------------------------------------
+@star1.html
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>첫 번째 매치</title>
+</head>
+<body>
+	<div align="center">
+		<h1>시켜먹고 싶은 치킨브랜드는? (첫 번쨰 매치)</h1>
+		<form method="get" action="/star2">
+		<table border="1">
+			<tr>
+				<td><img src="BBQ.jpg" width="300" height="220" alt="BBQ사진">
+				<td><img src="교촌치킨.jpg" width="300" height="220" alt="교촌치킨사진">
+			<tr>
+				<th><input type="radio" name="star1" value="BBQ">BBQ
+				<th><input type="radio" name="star1" value="교촌치킨">교촌치킨
+		</table><p>
+		
+		
+		<input type="submit" value="선택"><br>
+		</form>
+		<span style="color:aqua; font-weight:bold">그림 출처:나무위키</span>
+	</div>
+
+</body>
+</html>
+---------------------------------------------------------------------------------------------------------------
+@star2.html
+
+<!DOCTYPE html>
+<html xmlns:th="www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>두 번째 매치</title>
+</head>
+<body>
+	<div align="center">
+		<h1>시켜먹고 싶은 치킨브랜드는? (두 번쨰 매치)</h1>
+		<form method="get" action="/star3">
+		<table border="1">
+			<tr>
+				<td><img src="굽네치킨.jpg" width="300" height="220" alt="굽네치킨사진">
+				<td><img src="네네치킨.jpg" width="300" height="220" alt="네네치킨사진">
+			<tr>
+				<th><input type="radio" name="star2" value="굽네치킨">굽네치킨
+				<th><input type="radio" name="star2" value="네네치킨">네네치킨
+		</table><p>
+		<input type="hidden" name="ch1" th:value="${star1}"> <!-- 선택값 저장 -->
+		
+		
+		<input type="submit" value="선택">
+		</form>
+		<span style="color:aqua; font-weight:bold">그림 출처:나무위키</span>
+	</div>
+	
+</body>
+</html>
+---------------------------------------------------------------------------------------------------------------
+@star3.html
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>결승 매치</title>
+</head>
+<body style="background-color:pink">
+	<div align="center">
+		<h1>시켜먹고 싶은 치킨브랜드는? (결승!!!)</h1>
+		<form method="get" action="/star/winner">
+		<table border="1">
+			<tr>
+				<td><img th:src="|${star1}.jpg|" width="300" height="220">
+				<td><img th:src="|${star2}.jpg|" width="300" height="220">
+				
+			<tr>
+				<th><input type="radio" name="winner" th:value="${star1}">
+				<span th:text="${star1}"></span>
+				<th><input type="radio" name="winner" th:value="${star2}">
+				<span th:text="${star2}"></span>
+		</table><p>
+		<input type="hidden" name="ch1" th:value="${star1}"> <!-- 선택값 저장 -->
+		<input type="hidden" name="ch2" th:value="${star2}"> <!-- 선택값 저장 -->
+		
+		
+		<input type="submit" value="최종선택">
+		</form>
+		<span style="color:aqua; font-weight:bold">그림 출처:나무위키</span>
+	</div>
+	
+</body>
+</html>
+---------------------------------------------------------------------------------------------------------------
+@starWinner.html
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.com">
+<head>
+<meta charset="UTF-8">
+<title>결과창</title>
+</head>
+<body style="background-color:yellow">
+	<div align="center">
+		<h1>Congratulations</h1>
+		<Strong>승자는 <span style="color:blue" th:text="${winner}">최종선택</span> 입니다!!!</Strong><p>
+		<img th:src="|/${winner}.jpg|" width="320" height="400" alt="미방용"><p>
+		<a href="/star/list">결과 보기</a><p>
+		<span style="color:aqua; font-weight:bold">그림 출처:나무위키</span>
+	</div>
+	
+</body>
+</html>
+---------------------------------------------------------------------------------------------------------------
+@Star.java
+
+package com.webp.p5;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+@Entity
+public class Star {
+	@Id public Integer no; 
+	public String name; //이름
+	public Integer count_semi; // 준결승
+	public Integer count_final; //최종결승
+	
+} // class
+---------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
